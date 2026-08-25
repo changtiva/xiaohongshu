@@ -668,6 +668,7 @@ body.page-tool .tool-card:nth-child(6) { animation-delay: 360ms; }
   font-family: var(--font-sans); font-size: 0.85rem; color: var(--text);
   background: transparent; cursor: pointer; text-align: left; line-height: 1;
   -webkit-tap-highlight-color: transparent; appearance: none; -webkit-appearance: none;
+  -webkit-user-select: text; user-select: text;
 }
 .float-search-input::placeholder { color: var(--text-soft); }
 .float-search-btn {

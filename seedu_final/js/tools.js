@@ -361,21 +361,6 @@ function isColorText(text) {
   return !!normalizeHex(s) || /^rgba?\(/i.test(s) || /^hsla?\(/i.test(s);
 }
 
-/* 黑色胶囊提示：已选取 X + 右下角长按复制 */
-let pickToastTimer = null;
-function showPickToast(text) {
-  const el = document.getElementById('pickToast');
-  if (!el) return;
-  const textEl = document.getElementById('pickToastText');
-  const dotEl = document.getElementById('pickToastDot');
-  if (textEl) textEl.textContent = text;
-  if (dotEl) dotEl.style.background = normalizeHex(text) || text;
-  el.classList.add('show');
-  clearTimeout(pickToastTimer);
-  pickToastTimer = setTimeout(() => el.classList.remove('show'), 2000);
-}
-window.showPickToast = showPickToast;
-
 /* 选中文本方案：容器禁用剪贴板，用 textarea 全选 + 用户长按系统复制 */
 function copyViaSelect(text) {
   try {
@@ -400,7 +385,7 @@ window.copyViaSelect = copyViaSelect;
 /* 唤出右下角浮窗并同步显示所选颜色（任何页面均有效） */
 function revealFloatSearch(text) {
   const norm = normalizeHex(text) || text;
-  if ($('#floatSearchInput')) $('#floatSearchInput').textContent = norm;
+  if ($('#floatSearchInput')) $('#floatSearchInput').value = norm;
   if ($('#floatSearchDot')) $('#floatSearchDot').style.background = normalizeHex(text) || '';
   if ($('#floatSearch')) $('#floatSearch').classList.add('is-visible');
   window.__floatSearchPinned = true; // 选取后浮窗保持可见（app.js 滚动逻辑读取）
@@ -409,12 +394,11 @@ function revealFloatSearch(text) {
 window.revealFloatSearch = revealFloatSearch;
 
 /* 统一复制入口：
-   颜色文本 → 黑色胶囊「已选取 X / 右下角长按复制」+ 唤出右下角浮窗（不再弹输入框）；
+   颜色文本 → 唤出右下角浮窗（不再弹输入框）；
    其它文本 → 选中文本方案。 */
 async function copyText(text) {
   if (isColorText(text)) {
-    const norm = revealFloatSearch(text);
-    showPickToast(norm);
+    revealFloatSearch(text);
     return true;
   }
   return copyViaSelect(text);

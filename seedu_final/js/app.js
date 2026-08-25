@@ -724,7 +724,7 @@ function setBase(hex, { fromInput = false } = {}) {
   renderPreview(norm);
   renderPalettes(norm);
   renderGradients(norm);
-  if (els.floatSearchInput) els.floatSearchInput.textContent = norm;
+  if (els.floatSearchInput) els.floatSearchInput.value = norm;
 }
 /* 暴露给 gallery.js（配色方案库色卡「设为主色」交互与首页一致） */
 window.setBase = setBase;
@@ -847,7 +847,6 @@ function bindEvents() {
       if (pickerDot) pickerDot.style.background = hex;
       setBase(hex);
       if (window.revealFloatSearch) window.revealFloatSearch(hex);
-      if (window.showPickToast) window.showPickToast(hex);
       if (swatchPanel) swatchPanel.hidden = true;
     });
   }
@@ -874,7 +873,6 @@ function bindEvents() {
       }
       if (trigger) trigger.style.background = hex;
       if (window.revealFloatSearch) window.revealFloatSearch(hex);
-      if (window.showPickToast) window.showPickToast(hex);
       appPanel.hidden = true;
     });
   }
@@ -916,34 +914,16 @@ function bindEvents() {
     if (els.floatSearchInput && els.floatSearchBtn) {
       // 点击浮动取色：以按钮上显示的当前色号生成方案并滚动到配色区（仅首页存在配色区）。
       const applyFloatPick = () => {
-        const v = (els.floatSearchInput.textContent || state.base || '').trim();
+        const v = (els.floatSearchInput.value || state.base || '').trim();
         if (!v) return;
-        setBase(v); // 同步顶部输入框、取色器与全部配色（renderPalettes 会重绘方案）
-        renderPalettes(v); // 显式重绘，确保方案区刷新
+        setBase(v); // 内部已完成 parseColor→HEX 及全部渲染（renderPreview/renderPalettes/renderGradients）
         const pal = document.getElementById('palettes');
         if (pal) pal.scrollIntoView({ behavior: 'smooth' });
         toast(`已为 ${v} 生成配色`);
       };
-      // 长按复制：容器禁用剪贴板，用「选中文本」方案让用户长按系统复制
-      let lpTimer = null, lpFired = false;
-      const startLP = () => {
-        lpFired = false;
-        clearTimeout(lpTimer);
-        lpTimer = setTimeout(() => {
-          lpFired = true;
-          const v = (els.floatSearchInput.textContent || '').trim();
-          if (v && window.copyViaSelect) window.copyViaSelect(v);
-        }, 500);
-      };
-      const cancelLP = () => { clearTimeout(lpTimer); lpTimer = null; };
-      els.floatSearch.addEventListener('touchstart', startLP, { passive: true });
-      els.floatSearch.addEventListener('touchend', cancelLP);
-      els.floatSearch.addEventListener('touchmove', cancelLP);
-      els.floatSearch.addEventListener('touchcancel', cancelLP);
-      els.floatSearch.addEventListener('mousedown', startLP);
-      els.floatSearch.addEventListener('mouseup', cancelLP);
-      els.floatSearch.addEventListener('mouseleave', cancelLP);
-      const onPick = () => { if (lpFired) { lpFired = false; return; } applyFloatPick(); };
+      // 点击取色：以按钮上显示的当前色号生成方案并滚动到配色区（仅首页存在配色区）。
+      // 长按复制交互已移除（不再弹「选中文本」窗口）
+      const onPick = () => applyFloatPick();
       els.floatSearchBtn.addEventListener('click', onPick);
       els.floatSearchInput.addEventListener('click', onPick);
     }

@@ -915,6 +915,14 @@
               </div>
             </div>
 
+            <div class="about-section">
+              <h2 class="about-section-title">关于复制</h2>
+              <div class="about-prose">
+                <p>小工具运行在小红书受限的离线容器中，出于安全考虑，系统剪贴板（Clipboard API）与「一键复制」命令均被禁用，因此页面不提供复制按钮。</p>
+                <p>需要复制颜色时：<b>长按右下角小搜索上的颜色文本</b>，或<b>长按首页搜索框内的文本</b>，在弹出的系统菜单中选择「复制」即可。</p>
+              </div>
+            </div>
+
             <div class="about-section" id="sponsor">
               <h2 class="about-section-title">支持一下</h2>
               <div class="about-prose">
@@ -942,7 +950,7 @@
   <!-- 全局浮层：右下角取色/复制（选取颜色时在任何页面唤出；长按可复制当前颜色） -->
   <div class="float-search" id="floatSearch">
     <span class="float-search-dot" id="floatSearchDot"></span>
-    <button class="float-search-input" id="floatSearchInput" type="button" aria-label="当前选中颜色">#fd4a4a</button>
+    <input class="float-search-input" id="floatSearchInput" type="text" readonly value="#fd4a4a" aria-label="当前选中颜色（长按可复制）" />
     <button class="float-search-btn" id="floatSearchBtn" type="button" aria-label="取色">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </button>

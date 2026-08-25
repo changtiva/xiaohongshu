@@ -1362,10 +1362,8 @@
 .swatch-action:active,
 .cvd-swatch:active,
 .pal-list-hex:active,
-.pal-meta-item:active,
-.palette-preview-bar:active { transform: scale(0.96); }
+.pal-meta-item:active { transform: scale(0.96); }
 @media (prefers-reduced-motion: reduce) {
   .tab-btn:active, .pal-tab:active, .pal-harmony-item:active, .tool-action-btn:active,
-  .swatch-action:active, .cvd-swatch:active, .pal-list-hex:active, .pal-meta-item:active,
-  .palette-preview-bar:active { transform: none; }
+  .swatch-action:active, .cvd-swatch:active, .pal-list-hex:active, .pal-meta-item:active { transform: none; }
 }
