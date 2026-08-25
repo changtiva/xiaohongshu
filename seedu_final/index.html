@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#fd4a4a" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <title>色度 seedu · 在线配色工具</title>
+  <meta name="description" content="色度（seedu）是一个免费的在线配色工具，输入 HEX 颜色即可生成和谐配色方案，支持图片取色与灵感画廊。" />
+  <link rel="stylesheet" href="css_styles.css" />
+  <link rel="stylesheet" href="css_tools.css" />
+  <link rel="stylesheet" href="css_gallery.css" />
+  <link rel="stylesheet" href="css_about.css" />
+  <style>
+    /* ===== App 外壳（手机端，严格适配小红书容器） ===== */
+    :root{
+      --app-bottom-nav-h: 58px;
+      --app-top-h: 52px;
+    }
+    *{ box-sizing: border-box; }
+    html,body{ margin:0; padding:0; }
+    body{
+      font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg, #fbfbfd);
+      color: var(--text, #1a1a1a);
+      -webkit-text-size-adjust: 100%;
+      overscroll-behavior-y: none;
+    }
+
+    /* 顶部：系统按钮安全区(预留给容器返回/分享) + 下方 Logo 行
+       顶部 44px 为系统按钮让位(透明、点击穿透)，Logo 显示在其下方 */
+    .app-topbar{
+      position: sticky; top: 0; z-index: 50;
+      height: calc(44px + env(safe-area-inset-top) + 44px);
+      padding-top: calc(44px + env(safe-area-inset-top));
+      box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none; /* 顶部系统按钮区域点击穿透给容器 */
+      background: rgba(255,255,255,.86);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      border-bottom: 1px solid var(--border-light, #ececf0);
+    }
+    .app-topbar img{ height: 26px; width: auto; display:block; }
+    .app-topbar .app-top-beta{
+      margin-left:6px; font-size:10px; font-weight:700; letter-spacing:.04em;
+      color: var(--accent, #fd4a4a); border:1px solid currentColor; border-radius:6px;
+      padding:1px 5px; transform: translateY(-6px);
+    }
+
+    /* 视图容器：单页切换 */
+    .app-views{ padding-bottom: calc(var(--app-bottom-nav-h) + env(safe-area-inset-bottom)); }
+    .view{ display:none; }
+    .view.is-active{ display:block; }
+
+    /* 首页 hero 在手机端微调 */
+    .hero{ padding-top: 28px; }
+    .hero-title{ font-size: clamp(30px, 9vw, 48px); }
+
+    /* 预设色板面板 */
+    .hero-swatch-panel, .app-color-panel{
+      background: #fff; border: 1px solid var(--border-light,#ececf0); border-radius: 16px;
+      padding: 14px; margin: 14px 0 0; box-shadow: 0 12px 36px rgba(0,0,0,.08);
+    }
+    .app-color-panel{ position:fixed; left:16px; right:16px; bottom: calc(58px + env(safe-area-inset-bottom) + 12px); z-index:70; margin:0; }
+    .hero-swatch-head, .app-color-panel-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:14px; font-weight:600; }
+    .hero-swatch-close, .app-color-panel-close{ background:none; border:none; font-size:18px; color:var(--text-soft); width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center; border-radius:var(--r-md); cursor:pointer; }
+    .hero-swatch-grid, .app-color-panel-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+    .hero-swatch, .app-color-swatch{ width:100%; aspect-ratio:1; border-radius:50%; border:2px solid transparent; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); }
+    .hero-swatch:active, .app-color-swatch:active{ transform:scale(.92); }
+    .picker-dot-inner{ width:24px; height:24px; border-radius:50%; display:block; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.15); }
+    .picker-dot{ display:flex; align-items:center; justify-content:center; padding:0; background:none; border:none; }
+
+    /* 工具库卡片网格：手机单列 → 双列 */
+    .tools-index{ display:grid; grid-template-columns: 1fr; gap:14px; }
+    @media (min-width: 560px){ .tools-index{ grid-template-columns: 1fr 1fr; } }
+    .tool-card{ text-decoration:none; color:inherit; }
+
+    /* 方案库、关于同样用单列卡片 */
+    .scheme-cards{ display:grid; grid-template-columns:1fr; gap:14px; max-width:760px; margin:0 auto; }
+    @media (min-width: 560px){ .scheme-cards{ grid-template-columns:1fr 1fr; } }
+
+    /* 工具页返回链接改为返回"工具"tab，手机端更友好 */
+    .tool-back-link-wrap{ padding: 14px 0 4px; }
+    .tool-back-link{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:14px; font-weight:600; color:var(--text-soft,#6b6b76);
+      text-decoration:none;
+    }
+
+    /* 图片取色 / 高级配色器等桌面多栏 → 手机单列堆叠 */
+    .image-picker-layout{ display:flex; flex-direction:column; gap:18px; }
+    .pal-stage{ display:flex; flex-direction:column; gap:18px; }
+    .pal-aside{ width:100% !important; flex:none !important; padding:0 !important; }
+    .pal-main{ width:100% !important; }
+    .contrast-stage{ display:flex; flex-direction:column; gap:18px; }
+
+    /* 隐藏桌面端遗留元素（导航/页脚/语言切换）；注意：back-to-top 与 float-search 在小屏需要显示，不得隐藏 */
+    .site-header, .site-footer,
+    [data-lang-switcher], .nav-toggle-cb, .nav-toggle{ display:none !important; }
+
+    /* 方案页 / 关于页：强制纯白背景，不出现灰色底 */
+    #view-schemes, #view-about,
+    #view-scheme-gallery, #view-scheme-gradient,
+    #view-schemes .main-white, #view-about .main-white,
+    #view-scheme-gallery .main-white, #view-scheme-gradient .main-white{
+      background: #fff !important;
+    }
+
+    /* 底部导航：4 个 tab，含安全区 */
+    .app-tabbar{
+      position: fixed; left:0; right:0; bottom:0; z-index: 60;
+      height: calc(var(--app-bottom-nav-h) + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      display:flex; background: rgba(255,255,255,.94);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      border-top: 1px solid var(--border-light, #ececf0);
+    }
+    .app-tab{
+      flex:1; border:none; background:none; cursor:pointer;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+      font-size:11px; line-height:1; color: var(--text-faint, #6b6b76);
+      font-family: inherit; -webkit-tap-highlight-color: transparent;
+      /* 状态仅通过颜色区分，禁止任何改变尺寸的过渡 */
+      transition: color var(--t-fast, .18s) ease;
+    }
+    /* 统一图标盒子：固定尺寸 + 居中 + 无缩放，保证跨屏/跨分辨率视觉一致 */
+    .app-tab .app-tab-icon{
+      width:26px; height:26px;
+      display:flex; align-items:center; justify-content:center;
+      flex:none;
+    }
+    .app-tab svg{
+      display:block;
+      width:24px; height:24px;
+      /* 所有图标统一描边粗细与端点，视觉权重一致 */
+      stroke-width:2;
+      stroke-linecap:round; stroke-linejoin:round;
+      /* 状态切换不改变图标大小，仅颜色变化 */
+      transition: none;
+    }
+    .app-tab.is-active{ color: var(--accent, #fd4a4a); font-weight:600; }
+
+    /* ===== 选中 Tab：图标填充色播放一次渐变动画，随后定格品牌色（不是背后色块，不循环） ===== */
+    .app-tab .app-tab-icon{ position: relative; }
+
+    /* 未选中：图标用当前文字色（灰），覆盖 svg 内部的 url(#grad) 填充 */
+    .app-tab .app-tab-icon svg path,
+    .app-tab .app-tab-icon svg rect{ fill: currentColor; }
+
+    /* 选中：图标使用各自内部的渐变填充，并让 stop-color 一次性流动后定格品牌色 */
+    .app-tab.is-active[data-view="view-home"]    .app-tab-icon svg path,
+    .app-tab.is-active[data-view="view-home"]    .app-tab-icon svg rect{ fill: url(#lg-home); }
+    .app-tab.is-active[data-view="view-tools"]   .app-tab-icon svg path,
+    .app-tab.is-active[data-view="view-tools"]   .app-tab-icon svg rect{ fill: url(#lg-tools); }
+    .app-tab.is-active[data-view="view-schemes"] .app-tab-icon svg rect{ fill: url(#lg-schemes); }
+    .app-tab.is-active[data-view="view-about"]   .app-tab-icon svg path,
+    .app-tab.is-active[data-view="view-about"]   .app-tab-icon svg rect{ fill: url(#lg-about); }
+
+    /* 一次性渐变流动：红→橙→粉→品牌红，0.7s 后冻结在品牌色 */
+    .app-tab.is-active .app-tab-icon svg linearGradient stop{
+      animation: tabIconGrad 0.7s ease-out forwards;
+    }
+    @keyframes tabIconGrad{
+      0%   { stop-color: #fd4a4a; }
+      35%  { stop-color: #ff9a3d; }
+      70%  { stop-color: #ff4a8d; }
+      100% { stop-color: #fd4a4a; }
+    }
+    /* 尊重「减少动态效果」：直接定格品牌色，不播放动画 */
+    @media (prefers-reduced-motion: reduce){
+      .app-tab.is-active .app-tab-icon svg linearGradient stop{ animation: none; }
+    }
+
+    /* 关于页：去掉外链赞助按钮（小红书无外链），保留说明 */
+    .about-sponsor-links{ display:none; }
+    .about-cta a.about-btn[href^="http"], .about-cta a.about-btn[href^="mailto"]{ display:none; }
+
+    /* 让 container 在手机端有合适边距 */
+    .container{ padding-left:16px; padding-right:16px; }
+    .section{ padding: 26px 0; }
+    .main-white{ padding-bottom: 8px; }
+
+    /* toast 不被底部导航遮挡 */
+    .toast{ bottom: calc(var(--app-bottom-nav-h) + env(safe-area-inset-bottom) + 12px) !important; }
+  </style>
+</head>
+<body>
+
+  <!-- ============ 顶部：仅居中 Logo ============ -->
+  <header class="app-topbar">
+    <img src="logo.svg" alt="seedu 色度" />
+  </header>
+
+  <!-- ============ 单页视图区 ============ -->
+  <div class="app-views">
+
+    <!-- ===================== 首页 ===================== -->
+    <section class="view is-active" id="view-home">
+      <section class="hero" id="search">
+        <div class="container hero-inner">
+          <h1 class="hero-title">好<span class="hero-title-accent">配色</span><br />
+            <span class="hero-rotate" id="heroRotate">
+              <span class="hero-rotate-item">让创意更出色</span>
+              <span class="hero-rotate-item" aria-hidden="true">让品牌更醒目</span>
+              <span class="hero-rotate-item" aria-hidden="true">让设计更优雅</span>
+              <span class="hero-rotate-item" aria-hidden="true">让色彩更简单</span>
+            </span>
+          </h1>
+          <p class="hero-sub">专业的在线配色工具，轻松探索和生成完美配色方案。</p>
+
+          <div class="hero-search" id="colorForm">
+            <span class="search-dot" id="searchDot" aria-hidden="true"></span>
+            <input
+              id="heroHex"
+              class="hero-search-input"
+              type="text"
+              value="#fd4a4a"
+              placeholder="输入 HEX / RGB / HSL / 颜色名，如 #fd4a4a、rgb(253 74 74)、tomato"
+              spellcheck="false"
+              aria-label="HEX 颜色值"
+              maxlength="32"
+            />
+            <button type="button" class="picker-dot" id="heroPickerBtn" title="取色器" aria-label="打开预设色板">
+              <span class="picker-dot-inner" id="heroPickerDot" style="background:#fd4a4a"></span>
+            </button>
+            <input type="hidden" id="colorPicker" value="#fd4a4a" />
+            <button class="hero-search-btn" id="heroSubmitBtn" type="button" aria-label="生成配色">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </button>
+          </div>
+
+          <div class="hero-swatch-panel" id="heroSwatchPanel" hidden>
+            <div class="hero-swatch-head">
+              <span>选择颜色</span>
+              <button type="button" class="hero-swatch-close" id="heroSwatchClose" aria-label="关闭">✕</button>
+            </div>
+            <div class="hero-swatch-grid" id="heroSwatchGrid"></div>
+          </div>
+
+          <div class="preview-chips" id="preview">
+            <button class="chip" data-copy id="chipHex" type="button">
+              <span class="chip-label">HEX</span><span class="chip-value" id="valHex">#fd4a4a</span>
+            </button>
+            <button class="chip" data-copy id="chipRgb" type="button">
+              <span class="chip-label">RGB</span><span class="chip-value" id="valRgb">rgb(82,207,206)</span>
+            </button>
+            <button class="chip" data-copy id="chipHsl" type="button">
+              <span class="chip-label">HSL</span><span class="chip-value" id="valHsl">hsl(180,57%,57%)</span>
+            </button>
+            <span class="chip chip-static"><span class="chip-label">色系</span><span class="chip-value" id="valFamily">青绿色 · 冷色</span></span>
+          </div>
+        </div>
+      </section>
+
+      <main class="main-white">
+        <section class="section" id="palettes">
+          <div class="container">
+            <div class="section-head reveal">
+              <h2 class="section-title">为你生成的配色方案</h2>
+              <p class="section-desc">基于基准色自动推导的和谐配色，点击色块选取颜色。</p>
+            </div>
+            <div class="palette-grid" id="paletteGrid"><!-- JS 渲染 --></div>
+          </div>
+        </section>
+
+        <section class="section" id="gradients">
+          <div class="container">
+            <div class="section-head reveal">
+              <h2 class="section-title">为你生成的渐变预览</h2>
+              <p class="section-desc">基于当前基准色生成的渐变，点击保存到相册。</p>
+            </div>
+            <div class="gradient-grid" id="gradientGrid"><!-- JS 渲染 --></div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <!-- ===================== 工具 ===================== -->
+    <section class="view" id="view-tools">
+      <main class="main-white">
+        <div class="container">
+          <div class="section-head tools-head">
+            <h1 class="section-title">工具库</h1>
+            <p class="section-desc">打开即用的在线配色工具箱，取色、生成、检查一站搞定。</p>
+          </div>
+        </div>
+        <div class="container tools-index">
+          <a class="tool-card" href="#view-tool-extract" data-tool="extract">
+            <div class="tool-card-head">
+              <span class="tool-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              </span>
+              <span class="tool-card-num">01</span>
+            </div>
+            <h3 class="tool-card-title">图片取色</h3>
+            <p class="tool-card-desc">上传图片，按从浅到深自动提取 6-24 个主色与占比，点击色块复制 HEX。</p>
+            <span class="tool-card-arrow">打开
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </a>
+
+          <a class="tool-card" href="#view-tool-palette" data-tool="palette">
+            <div class="tool-card-head">
+              <span class="tool-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.292-.437-.652-.437-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+              </span>
+              <span class="tool-card-num">02</span>
+            </div>
+            <h3 class="tool-card-title">高级配色器</h3>
+            <p class="tool-card-desc">调节彩度与明度，按 7 种和谐类型生成 2-6 色方案，支持锁定单个颜色后重新生成其余颜色。</p>
+            <span class="tool-card-arrow">打开
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </a>
+
+          <a class="tool-card" href="#view-tool-cvd" data-tool="cvd">
+            <div class="tool-card-head">
+              <span class="tool-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </span>
+              <span class="tool-card-num">03</span>
+            </div>
+            <h3 class="tool-card-title">色盲检测</h3>
+            <p class="tool-card-desc">用 Machado 2009 模拟矩阵预览红色盲、绿色盲、蓝色盲看到的颜色，评估配色可读性。</p>
+            <span class="tool-card-arrow">打开
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </a>
+
+          <a class="tool-card" href="#view-tool-format" data-tool="format">
+            <div class="tool-card-head">
+              <span class="tool-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6 2 12l6 6"/><path d="m16 6 6 6-6 6"/><path d="m14 4-4 16"/></svg>
+              </span>
+              <span class="tool-card-num">04</span>
+            </div>
+            <h3 class="tool-card-title">颜色格式转换</h3>
+            <p class="tool-card-desc">自动识别 HEX / RGB / HSL 输入，实时输出四种格式与色点预览，每行可单独复制。</p>
+            <span class="tool-card-arrow">打开
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </a>
+
+          <a class="tool-card" href="#view-tool-contrast" data-tool="contrast">
+            <div class="tool-card-head">
+              <span class="tool-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20Z" fill="currentColor"/></svg>
+              </span>
+              <span class="tool-card-num">05</span>
+            </div>
+            <h3 class="tool-card-title">对比度检查器</h3>
+            <p class="tool-card-desc">按 WCAG 2.1 计算前景 / 背景对比度，给出 AAA / AA / AA Large / Fail 等级徽章与样例预览。</p>
+            <span class="tool-card-arrow">打开
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </a>
+
+        </div>
+      </main>
+    </section>
+
+    <!-- ============ 图片取色 ============ -->
+    <section class="view" id="view-tool-extract">
+      <main class="main-white">
+        <div class="container tool-back-link-wrap">
+          <a class="tool-back-link" href="#view-tools">← 返回工具库</a>
+        </div>
+        <section class="section tool-page-hero" id="tool-extract">
+          <div class="container">
+            <div class="section-head">
+              <h1 class="section-title">图片取色</h1>
+              <p class="section-desc">上传图片，自动按从浅到深排序并按需生成 6-24 个颜色结果。</p>
+            </div>
+            <div class="image-picker-layout">
+              <div class="image-picker-col image-picker-col--upload">
+                <div class="image-picker-panel" id="toolImagePanel">
+                  <div class="image-picker-empty" id="toolImageEmpty">
+                    <div class="image-drop" id="toolImageDrop">
+                      <input type="file" id="toolImageInput" class="image-input" accept="image/*" />
+                      <div class="image-drop-content">
+                        <svg class="image-drop-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        <p class="image-drop-title">拖拽图片到此处，或点击上传</p>
+                        <p class="image-drop-hint">支持 JPG、PNG、WebP 格式</p>
+                        <p class="image-drop-hint">或按 <kbd>Ctrl</kbd> + <kbd>V</kbd> 粘贴</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="image-picker-preview" id="toolImagePreviewWrap" hidden>
+                    <div class="image-picker-imgframe">
+                      <div class="image-picker-imgbox" id="toolImageImgbox">
+                        <img id="toolImagePreview" alt="图片预览" />
+                        <div class="image-picker-dots" id="toolImageDots" aria-hidden="true"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-outline btn-block image-picker-action" id="toolImageReupload" type="button" hidden>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  <span>重新上传</span>
+                </button>
+              </div>
+
+              <div class="image-picker-col image-picker-col--slider">
+                <div class="image-picker-slider-card">
+                  <div class="image-picker-mode">
+                    <div class="image-picker-mode-head">
+                      <span class="image-picker-mode-label">取色模式</span>
+                      <button type="button" class="pal-reset-btn" id="toolImageResetBtn" title="重置数量为 5、饱和度为 100、亮度为 100、亮度范围为 0-100" aria-label="重置取色参数">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+                        <span>重置</span>
+                      </button>
+                    </div>
+                    <div class="contrast-tabs" id="toolImageMode" role="tablist" aria-label="取色模式">
+                      <button type="button" class="tab-btn is-active" data-mode="dominant" role="tab" aria-selected="true">占比</button>
+                      <button type="button" class="tab-btn" data-mode="light" role="tab" aria-selected="false">亮色</button>
+                      <button type="button" class="tab-btn" data-mode="dark" role="tab" aria-selected="false">暗色</button>
+                      <button type="button" class="tab-btn" data-mode="custom" role="tab" aria-selected="false">自定义</button>
+                    </div>
+                  </div>
+                  <div class="pal-slider" data-channel="count">
+                    <span class="pal-slider-tag">数量</span>
+                    <input type="range" id="toolImageCount" min="3" max="12" step="1" value="5" aria-label="提取颜色数量（3-12）" />
+                    <input type="number" id="toolImageCountValue" min="3" max="12" step="1" value="5" class="pal-slider-num" aria-label="提取颜色数量（3-12）" />
+                  </div>
+                  <div class="pal-slider" data-channel="sat">
+                    <span class="pal-slider-tag">饱和度</span>
+                    <input type="range" id="toolImageSat" min="0" max="200" step="5" value="100" aria-label="饱和度（0%-200%）" />
+                    <input type="number" id="toolImageSatValue" min="0" max="200" step="5" value="100" class="pal-slider-num" aria-label="饱和度（0%-200%）" />
+                  </div>
+                  <div class="pal-slider" data-channel="light">
+                    <span class="pal-slider-tag">亮度</span>
+                    <input type="range" id="toolImageLight" min="0" max="200" step="5" value="100" aria-label="亮度（0%-200%）" />
+                    <input type="number" id="toolImageLightValue" min="0" max="200" step="5" value="100" class="pal-slider-num" aria-label="亮度（0%-200%）" />
+                  </div>
+                  <div class="pal-slider pal-slider--range" data-channel="luma" id="toolImageLumaRow">
+                    <span class="pal-slider-tag">亮度范围</span>
+                    <div class="image-picker-range-track" id="toolImageLumaTrack">
+                      <div class="image-picker-range-fill" id="toolImageLumaFill"></div>
+                      <input type="range" id="toolImageLumaMin" min="0" max="100" step="1" value="0" aria-label="亮度下限（0%-100%）" />
+                      <input type="range" id="toolImageLumaMax" min="0" max="100" step="1" value="100" aria-label="亮度上限（0%-100%）" />
+                    </div>
+                    <div class="image-picker-luma-inputs">
+                      <input type="number" id="toolImageLumaMinValue" min="0" max="100" step="1" value="0" class="pal-slider-num" aria-label="亮度下限数值（0-100）" />
+                      <span class="image-picker-luma-sep">–</span>
+                      <input type="number" id="toolImageLumaMaxValue" min="0" max="100" step="1" value="100" class="pal-slider-num" aria-label="亮度上限数值（0-100）" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="image-picker-col image-picker-col--right">
+                <div class="image-picker-results" id="toolImageResults" hidden>
+                  <div class="pal-grad-bar" id="toolImageGradientBar"></div>
+                  <div class="pal-card" id="toolImagePalCard">
+                    <div class="pal-row" id="toolImagePalRow"></div>
+                    <div class="pal-meta" id="toolImagePalMeta"></div>
+                  </div>
+                  <button class="btn btn-primary btn-block image-export-btn" id="toolImageExport" type="button" hidden>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    <span>保存色卡到相册</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <!-- ============ 高级配色器 ============ -->
+    <section class="view" id="view-tool-palette">
+      <main class="main-white">
+        <div class="container tool-back-link-wrap">
+          <a class="tool-back-link" href="#view-tools">← 返回工具库</a>
+        </div>
+        <section class="section tool-page-hero" id="tool-palette">
+          <div class="container">
+            <div class="section-head">
+              <h1 class="section-title">高级配色器</h1>
+              <p class="section-desc">色环选色 + 5 种和谐关系，生成 2-6 个主要色 + 12 个派生色，可单独微调彩度与明度。</p>
+            </div>
+            <div class="pal-stage">
+              <aside class="pal-aside">
+                <div class="pal-section">
+                  <p class="pal-sliders-title pal-block-label">和谐类型</p>
+                  <div class="pal-harmony" id="palHarmony" role="radiogroup" aria-label="和谐类型">
+                    <button type="button" class="pal-harmony-item is-active" data-harmony="mono" role="radio" aria-checked="true">
+                      <svg viewBox="0 0 128 129" aria-hidden="true"></svg>
+                      <span>单色</span>
+                    </button>
+                    <button type="button" class="pal-harmony-item" data-harmony="complementary" role="radio" aria-checked="false">
+                      <svg viewBox="0 0 128 129" aria-hidden="true"></svg>
+                      <span>互补</span>
+                    </button>
+                    <button type="button" class="pal-harmony-item" data-harmony="analogous" role="radio" aria-checked="false">
+                      <svg viewBox="0 0 128 129" aria-hidden="true"></svg>
+                      <span>类似</span>
+                    </button>
+                    <button type="button" class="pal-harmony-item" data-harmony="triadic" role="radio" aria-checked="false">
+                      <svg viewBox="0 0 128 129" aria-hidden="true"></svg>
+                      <span>三角</span>
+                    </button>
+                    <button type="button" class="pal-harmony-item" data-harmony="tetradic" role="radio" aria-checked="false">
+                      <svg viewBox="0 0 128 129" aria-hidden="true"></svg>
+                      <span>矩形</span>
+                    </button>
+                  </div>
+                </div>
+
+                <section class="pal-section pal-wheel-block">
+                  <p class="pal-sliders-title pal-block-label">色环选色</p>
+                  <div class="pal-wheel-wrap" style="position:relative;width:260px;height:260px;margin:0 auto">
+                    <canvas id="palWheel" width="320" height="320" aria-label="色环选色" style="width:100%;height:100%;display:block;border-radius:50%"></canvas>
+                    <div class="pal-wheel-anchors" id="palWheelAnchors" aria-hidden="true"></div>
+                    <div class="pal-wheel-dot" id="palWheelDot" aria-hidden="true"></div>
+                  </div>
+                  <p class="pal-wheel-hint">拖动或点击色环选取基准色</p>
+                </section>
+
+                <div class="pal-section">
+                  <p class="pal-sliders-title pal-block-label">基准色</p>
+                  <div class="pal-base-row">
+                    <button type="button" class="color-circle pal-base-chip" id="palBaseChip" data-color-trigger="palColorInput" aria-label="打开预设色板" style="background:var(--base)">
+                      <input type="hidden" id="palColorInput" value="#fd4a4a" />
+                    </button>
+                    <input type="text" id="palHex" value="#FD4A4A" maxlength="32" spellcheck="false" class="color-hex-input pal-hex-input" aria-label="基准色 HEX" />
+                  </div>
+                </div>
+
+                <section class="pal-section pal-sliders-block">
+                  <div class="pal-sliders-head">
+                    <span class="pal-sliders-title">精细调节</span>
+                    <button type="button" class="pal-reset-btn" id="palResetBtn" title="重置彩度为 100、明度为 0（RGB 跟随基准色，不受重置影响）" aria-label="重置彩度明度">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+                      <span>重置</span>
+                    </button>
+                  </div>
+                  <div class="pal-slider" data-channel="C">
+                    <span class="pal-slider-tag">彩度</span>
+                    <input type="range" id="palChroma" min="0" max="200" value="100" />
+                    <input type="number" id="palChromaNum" min="0" max="200" value="100" class="pal-slider-num" />
+                  </div>
+                  <div class="pal-slider" data-channel="L">
+                    <span class="pal-slider-tag">明度</span>
+                    <input type="range" id="palLight" min="-50" max="50" value="0" />
+                    <input type="number" id="palLightNum" min="-50" max="50" value="0" class="pal-slider-num" />
+                  </div>
+                  <div class="pal-slider-divider" aria-hidden="true"></div>
+                  <div class="pal-slider" data-channel="R">
+                    <span class="pal-slider-tag">R</span>
+                    <input type="range" id="palR" min="0" max="255" value="253" />
+                    <input type="number" id="palRNum" min="0" max="255" value="253" class="pal-slider-num" aria-label="R" />
+                  </div>
+                  <div class="pal-slider" data-channel="G">
+                    <span class="pal-slider-tag">G</span>
+                    <input type="range" id="palG" min="0" max="255" value="74" />
+                    <input type="number" id="palGNum" min="0" max="255" value="74" class="pal-slider-num" aria-label="G" />
+                  </div>
+                  <div class="pal-slider" data-channel="B">
+                    <span class="pal-slider-tag">B</span>
+                    <input type="range" id="palB" min="0" max="255" value="74" />
+                    <input type="number" id="palBNum" min="0" max="255" value="74" class="pal-slider-num" aria-label="B" />
+                  </div>
+                </section>
+              </aside>
+
+              <main class="pal-main" style="flex:1;display:flex;flex-direction:column;min-width:0;box-sizing:border-box">
+                <article class="palette-card pal-section-card" style="overflow:hidden">
+                  <div class="palette-preview pal-preview--anchors" id="palPrimary" style="display:flex;height:130px;border-bottom:1px solid var(--border-light)"></div>
+                  <div class="palette-info" style="padding:16px 20px 20px">
+                    <h3 class="palette-name">主要颜色</h3>
+                    <p class="palette-meta" id="palPrimaryMeta">和谐关系锚点 · 1 色</p>
+                  </div>
+                </article>
+
+                <article class="palette-card pal-section-card" style="overflow:hidden">
+                  <div class="palette-preview pal-preview--gen" id="palGen" style="display:flex;height:90px;border-bottom:1px solid var(--border-light)"></div>
+                  <div class="palette-info" style="padding:16px 20px 20px">
+                    <h3 class="palette-name">生成颜色</h3>
+                    <p class="palette-meta">明度 / 彩度阶梯 · <span id="palGenCount">12</span> 色</p>
+                  </div>
+                </article>
+
+                <div class="pal-tabs-bar">
+                  <div class="pal-tabs" id="palTabs" role="tablist" aria-label="辅助视图">
+                    <button type="button" class="pal-tab is-active" data-tab="preview" role="tab" aria-selected="true">配色预览</button>
+                    <button type="button" class="pal-tab" data-tab="list" role="tab" aria-selected="false">色彩列表</button>
+                  </div>
+                </div>
+                <div class="pal-tab-content" id="palTabContent"></div>
+              </main>
+            </div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <!-- ============ 色盲检测 ============ -->
+    <section class="view" id="view-tool-cvd">
+      <main class="main-white">
+        <div class="container tool-back-link-wrap">
+          <a class="tool-back-link" href="#view-tools">← 返回工具库</a>
+        </div>
+        <section class="section tool-page-hero" id="tool-cvd">
+          <div class="container">
+            <div class="section-head">
+              <h1 class="section-title">色盲检测</h1>
+              <p class="section-desc">模拟 7 种色觉类型、调节严重程度、上传图片查看视图差异，评估配色对不同色觉人群的可用性。</p>
+            </div>
+            <div class="tool-panel">
+              <h3 class="cvd-block-title">颜色模拟</h3>
+              <div class="cvd-controls">
+                <div class="cvd-control-group">
+                  <span class="cvd-control-label">检测颜色</span>
+                  <div class="cvd-control-row">
+                    <button type="button" class="color-circle" data-color-trigger="toolCvdColor" style="background:#fd4a4a" aria-label="打开预设色板">
+                      <input type="hidden" id="toolCvdColor" value="#fd4a4a" />
+                    </button>
+                    <input type="text" id="toolCvdHex" value="#fd4a4a" maxlength="32" spellcheck="false" class="color-hex-input" aria-label="检测颜色 HEX" />
+                  </div>
+                </div>
+                <div class="cvd-control-group">
+                  <span class="cvd-control-label">常用颜色</span>
+                  <div class="cvd-control-row">
+                    <div class="tool-presets" id="toolCvdPresets" aria-label="颜色预设">
+                      <button class="preset-btn" type="button" data-hex="#FF4B4B" style="background:#FF4B4B" title="#FF4B4B" aria-label="预设 #FF4B4B"></button>
+                      <button class="preset-btn" type="button" data-hex="#22C55E" style="background:#22C55E" title="#22C55E" aria-label="预设 #22C55E"></button>
+                      <button class="preset-btn" type="button" data-hex="#3B82F6" style="background:#3B82F6" title="#3B82F6" aria-label="预设 #3B82F6"></button>
+                      <button class="preset-btn" type="button" data-hex="#A855F7" style="background:#A855F7" title="#A855F7" aria-label="预设 #A855F7"></button>
+                      <button class="preset-btn" type="button" data-hex="#FACC15" style="background:#FACC15" title="#FACC15" aria-label="预设 #FACC15"></button>
+                      <button class="preset-btn" type="button" data-hex="#0D9488" style="background:#0D9488" title="#0D9488" aria-label="预设 #0D9488"></button>
+                    </div>
+                  </div>
+                </div>
+                <div class="cvd-control-group">
+                  <span class="cvd-control-label">严重程度</span>
+                  <div class="cvd-control-row">
+                    <input type="range" id="toolCvdSeverity" class="cvd-sev-slider" min="0" max="100" value="100" aria-label="严重程度（0-100%）" />
+                    <input type="number" class="tool-field-num" id="toolCvdSeverityValue" min="0" max="100" step="1" value="100" aria-label="严重程度数值" />
+                  </div>
+                </div>
+              </div>
+              <div class="cvd-grid" id="toolCvdGrid"></div>
+              <p class="cvd-note">点击色块可复制色值。红色弱 / 绿色弱受上方「严重程度」影响（0% 与正常相同，100% 与对应色盲相同）；全色盲仅保留亮度（灰度）。</p>
+            </div>
+
+            <div class="tool-panel cvd-panel-spaced">
+              <div class="cvd-image-head">
+                <div>
+                  <h3 class="cvd-block-title">图片模拟</h3>
+                  <p class="cvd-block-desc">上传图片，查看红色盲、绿色盲、蓝色盲、全色盲眼中的效果。</p>
+                </div>
+              </div>
+              <div class="cvd-image-drop" id="toolCvdImageDrop">
+                <input type="file" id="toolCvdImageInput" class="image-input" accept="image/*" />
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <p class="cvd-image-drop-text">拖拽图片到此处，或点击上传</p>
+              </div>
+              <div class="cvd-img-grid" id="toolCvdImageGrid"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <!-- ============ 颜色格式转换 ============ -->
+    <section class="view" id="view-tool-format">
+      <main class="main-white">
+        <div class="container tool-back-link-wrap">
+          <a class="tool-back-link" href="#view-tools">← 返回工具库</a>
+        </div>
+        <section class="section tool-page-hero" id="tool-format">
+          <div class="container">
+            <div class="section-head">
+              <h1 class="section-title">颜色格式转换</h1>
+              <p class="section-desc">支持 14 种颜色格式，输入任意一种即实时换算其余全部，并支持一键复制。</p>
+            </div>
+            <div class="tool-panel">
+              <div class="format-hero">
+                <span class="format-swatch" id="toolFormatSwatch" aria-hidden="true"></span>
+                <div class="format-hero-meta">
+                  <span class="format-hero-title" id="toolFormatHeroName">实时预览</span>
+                  <span class="format-hero-sub" id="toolFormatHeroHex">#FD4A4A</span>
+                </div>
+              </div>
+              <p class="format-hint">
+                在任意输入框中键入颜色值，其余格式将自动同步。
+              </p>
+              <div class="format-grid">
+                <div class="format-field"><label class="format-field-label" for="fi-hex">HEX</label><div class="format-input-row"><input class="format-input-field" id="fi-hex" type="text" spellcheck="false" placeholder="#FD4A4A" /><span class="format-field-swatch" data-for="fi-hex"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-hexa">HEX (Alpha)</label><div class="format-input-row"><input class="format-input-field" id="fi-hexa" type="text" spellcheck="false" placeholder="#FD4A4AFF" /><span class="format-field-swatch" data-for="fi-hexa"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-rgb">RGB</label><div class="format-input-row"><input class="format-input-field" id="fi-rgb" type="text" spellcheck="false" placeholder="rgb(253, 74, 74)" /><span class="format-field-swatch" data-for="fi-rgb"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-rgba">RGBA</label><div class="format-input-row"><input class="format-input-field" id="fi-rgba" type="text" spellcheck="false" placeholder="rgba(253, 74, 74, 1)" /><span class="format-field-swatch" data-for="fi-rgba"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-hsl">HSL</label><div class="format-input-row"><input class="format-input-field" id="fi-hsl" type="text" spellcheck="false" placeholder="hsl(0, 98%, 64%)" /><span class="format-field-swatch" data-for="fi-hsl"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-hsla">HSLA</label><div class="format-input-row"><input class="format-input-field" id="fi-hsla" type="text" spellcheck="false" placeholder="hsla(0, 98%, 64%, 1)" /><span class="format-field-swatch" data-for="fi-hsla"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-hsv">HSV</label><div class="format-input-row"><input class="format-input-field" id="fi-hsv" type="text" spellcheck="false" placeholder="hsv(0, 71%, 99%)" /><span class="format-field-swatch" data-for="fi-hsv"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-hwb">HWB</label><div class="format-input-row"><input class="format-input-field" id="fi-hwb" type="text" spellcheck="false" placeholder="hwb(0, 29%, 1%)" /><span class="format-field-swatch" data-for="fi-hwb"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-cmyk">CMYK</label><div class="format-input-row"><input class="format-input-field" id="fi-cmyk" type="text" spellcheck="false" placeholder="cmyk(0%, 71%, 71%, 1%)" /><span class="format-field-swatch" data-for="fi-cmyk"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-lab">LAB</label><div class="format-input-row"><input class="format-input-field" id="fi-lab" type="text" spellcheck="false" placeholder="lab(58.3%, 67.11, 40.27)" /><span class="format-field-swatch" data-for="fi-lab"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-lch">LCH</label><div class="format-input-row"><input class="format-input-field" id="fi-lch" type="text" spellcheck="false" placeholder="lch(58.3%, 78.26, 30.97)" /><span class="format-field-swatch" data-for="fi-lch"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-oklch">OKLCH</label><div class="format-input-row"><input class="format-input-field" id="fi-oklch" type="text" spellcheck="false" placeholder="oklch(66.64%, 0.22, 25.22)" /><span class="format-field-swatch" data-for="fi-oklch"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-oklab">OKLAB</label><div class="format-input-row"><input class="format-input-field" id="fi-oklab" type="text" spellcheck="false" placeholder="oklab(66.64%, 0.2, 0.09)" /><span class="format-field-swatch" data-for="fi-oklab"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-xyz">XYZ</label><div class="format-input-row"><input class="format-input-field" id="fi-xyz" type="text" spellcheck="false" placeholder="xyz(0.44, 0.26, 0.09)" /><span class="format-field-swatch" data-for="fi-xyz"></span></div></div>
+                <div class="format-field"><label class="format-field-label" for="fi-named">命名颜色</label><div class="format-input-row"><input class="format-input-field" id="fi-named" type="text" spellcheck="false" placeholder="red · rebeccapurple" /><span class="format-field-swatch" data-for="fi-named"></span></div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <!-- ============ 对比度检查器 ============ -->
+    <section class="view" id="view-tool-contrast">
+      <main class="main-white">
+        <div class="container tool-back-link-wrap">
+          <a class="tool-back-link" href="#view-tools">← 返回工具库</a>
+        </div>
+        <section class="section tool-page-hero" id="tool-contrast">
+          <div class="container">
+            <div class="section-head">
+              <h1 class="section-title">对比度检查器</h1>
+              <p class="section-desc">输入文字与背景颜色，实时查看对比度是否达到 WCAG 2.1 无障碍标准。</p>
+            </div>
+            <div class="contrast-stage">
+              <div class="contrast-aside">
+                <section class="contrast-block" aria-label="颜色设置">
+                  <h3 class="contrast-block-title">颜色设置</h3>
+                  <div class="tool-row tool-row--color">
+                    <label class="tool-field"><span>文字颜色</span>
+                      <span class="color-pill">
+                        <button type="button" class="color-circle" id="toolContrastFgCircle" data-color-trigger="toolContrastFg" style="background:#111111" aria-label="打开预设色板">
+                          <input type="hidden" id="toolContrastFg" value="#111111" />
+                        </button>
+                        <input type="text" id="toolContrastFgHex" value="#111111" maxlength="32" spellcheck="false" class="color-hex-input" aria-label="文字颜色（支持 HEX / RGB / HSL，例如 #111、rgb(17,17,17)）" />
+                      </span>
+                    </label>
+                    <button class="btn btn-outline btn-swap" id="toolContrastSwap" type="button" aria-label="交换文字与背景颜色" title="交换文字与背景颜色">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 3 4 4-4 4"/><path d="M21 7H3"/><path d="m7 21-4-4 4-4"/><path d="M21 17H3"/></svg>
+                    </button>
+                    <label class="tool-field"><span>背景颜色</span>
+                      <span class="color-pill">
+                        <button type="button" class="color-circle" id="toolContrastBgCircle" data-color-trigger="toolContrastBg" style="background:#fd4a4a" aria-label="打开预设色板">
+                          <input type="hidden" id="toolContrastBg" value="#fd4a4a" />
+                        </button>
+                        <input type="text" id="toolContrastBgHex" value="#fd4a4a" maxlength="32" spellcheck="false" class="color-hex-input" aria-label="背景颜色（支持 HEX / RGB / HSL，例如 #fd4a4a、rgb(253,74,74)）" />
+                      </span>
+                    </label>
+                  </div>
+                </section>
+                <section class="contrast-block" aria-label="WCAG 阈值判定">
+                  <h3 class="contrast-block-title">WCAG 2.1 阈值判定</h3>
+                  <div class="contrast-thresholds" id="toolContrastThresholds">
+                    <table class="threshold-table">
+                      <thead><tr><th>适用场景</th><th>AA</th><th>AAA</th></tr></thead>
+                      <tbody>
+                        <tr><td>小号正文 <span class="th-tag">常规文字</span></td><td><span class="threshold-state" data-level="aa">--</span></td><td><span class="threshold-state" data-level="aaa">--</span></td></tr>
+                        <tr><td>大号文字 <span class="th-tag">≥18px / ≥14px 加粗</span></td><td><span class="threshold-state" data-level="aa-lg">--</span></td><td><span class="threshold-state" data-level="aaa-lg">--</span></td></tr>
+                        <tr><td>图形与界面元素 <span class="th-tag">图标 / 边框 / UI</span></td><td><span class="threshold-state" data-level="ui">--</span></td><td class="th-na">不适用</td></tr>
+                      </tbody>
+                    </table>
+                    <p class="contrast-suggestion" id="toolContrastSuggestion" role="note" aria-live="polite"></p>
+                  </div>
+                </section>
+              </div>
+              <aside class="contrast-main" aria-label="实时预览与对比度读数">
+                <div class="contrast-gauge">
+                  <span class="contrast-gauge-label">当前对比度</span>
+                  <div class="contrast-gauge-head">
+                    <div class="contrast-gauge-value" id="toolContrastValue">--</div>
+                    <div class="contrast-badge" id="toolContrastBadge">--</div>
+                  </div>
+                  <div class="contrast-scale" aria-hidden="true">
+                    <div class="contrast-scale-track">
+                      <div class="contrast-scale-fill" id="toolContrastScaleFill"></div>
+                      <span class="contrast-scale-tick" style="left:10%"></span>
+                      <span class="contrast-scale-tick" style="left:17.5%"></span>
+                    </div>
+                    <div class="contrast-scale-marks">
+                      <span class="contrast-scale-mark" style="left:0; transform:none">1:1</span>
+                      <span class="contrast-scale-mark contrast-scale-mark--mid" style="left:10%">3:1</span>
+                      <span class="contrast-scale-mark contrast-scale-mark--mid" style="left:17.5%">4.5:1</span>
+                      <span class="contrast-scale-mark" style="left:100%; transform:translateX(-100%)">21:1</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="preview-title">文字效果预览</div>
+                <div class="contrast-preview" id="toolContrastPreview">
+                  <p class="preview-text" id="toolContrastSampleSm">正文示例文字，用来检查在背景上的可读性。</p>
+                  <p class="preview-text preview-text--lg" id="toolContrastSampleLg">大号标题文字</p>
+                  <p class="preview-text preview-text--lg preview-text--bold" id="toolContrastSampleBold">加粗强调文字</p>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <!-- ===================== 方案 ===================== -->
+    <section class="view" id="view-schemes">
+      <main class="main-white">
+        <div class="container">
+          <div class="section-head tools-head">
+            <h1 class="section-title">方案库</h1>
+            <p class="section-desc">精选配色与渐变方案，按场景和风格快速找到适合项目的色彩方向。</p>
+          </div>
+        </div>
+        <div class="container scheme-cards">
+          <a class="tool-card" href="#view-scheme-gallery">
+            <div class="tool-card-head">
+              <span class="tool-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.292-.437-.652-.437-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="9.5" r="1.2" fill="currentColor"/><circle cx="12" cy="14" r="1.2" fill="currentColor"/></svg>
+              </span>
+              <span class="tool-card-num">01</span>
+            </div>
+            <h3 class="tool-card-title">配色方案</h3>
+            <p class="tool-card-desc">从精选配色开始，按自然、柔和、复古、冷暖等风格浏览上百组方案，一键复制整个色板。</p>
+            <span class="tool-card-arrow">打开
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </a>
+          <a class="tool-card" href="#view-scheme-gradient">
+            <div class="tool-card-head">
+              <span class="tool-card-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 1024 1024" fill="currentColor"><path d="M832 128c38.4 0 64 25.6 64 64v640c0 38.4-25.6 64-64 64H192c-38.4 0-64-25.6-64-64V192c0-38.4 25.6-64 64-64h640z m0 64H192v640L832 192z"/></svg>
+              </span>
+              <span class="tool-card-num">02</span>
+            </div>
+            <h3 class="tool-card-title">渐变方案</h3>
+            <p class="tool-card-desc">12 组精心调配的渐变预设，涵盖邻近、互补、分裂、单色与大地色，直接复制 CSS 渐变代码。</p>
+            <span class="tool-card-arrow">打开
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </a>
+        </div>
+      </main>
+    </section>
+
+    <!-- ============ 配色方案库 ============ -->
+    <section class="view" id="view-scheme-gallery">
+      <main class="main-white">
+        <div class="container tool-back-link-wrap">
+          <a class="tool-back-link" href="#view-schemes">← 返回方案库</a>
+        </div>
+        <section class="section gallery-page-hero">
+          <div class="container">
+            <div class="section-head">
+              <h1 class="section-title">配色方案</h1>
+              <p class="section-desc">从精选配色开始，快速找到适合项目的色彩方向。</p>
+            </div>
+            <div class="gallery-toolbar">
+              <div class="gallery-tabs" id="schemeTabs" role="tablist" aria-label="图库分类">
+                <button class="gallery-tab is-active" data-category="all" role="tab" aria-selected="true" type="button">全部</button>
+                <button class="gallery-tab" data-category="nature" role="tab" aria-selected="false" type="button">自然</button>
+                <button class="gallery-tab" data-category="soft" role="tab" aria-selected="false" type="button">柔和</button>
+                <button class="gallery-tab" data-category="vintage" role="tab" aria-selected="false" type="button">复古</button>
+                <button class="gallery-tab" data-category="cool" role="tab" aria-selected="false" type="button">冷色</button>
+                <button class="gallery-tab" data-category="warm" role="tab" aria-selected="false" type="button">暖色</button>
+                <button class="gallery-tab" data-category="neon" role="tab" aria-selected="false" type="button">霓虹</button>
+                <button class="gallery-tab" data-category="dark" role="tab" aria-selected="false" type="button">暗色</button>
+              </div>
+            </div>
+            <div class="gallery-grid" id="schemeGrid"></div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <!-- ============ 渐变方案库 ============ -->
+    <section class="view" id="view-scheme-gradient">
+      <main class="main-white">
+        <div class="container tool-back-link-wrap">
+          <a class="tool-back-link" href="#view-schemes">← 返回方案库</a>
+        </div>
+        <section class="section gallery-page-hero">
+          <div class="container">
+            <div class="section-head">
+              <h1 class="section-title">渐变方案</h1>
+              <p class="section-desc">点击卡片复制 CSS，也可保存成图片到本地。</p>
+            </div>
+            <div class="gallery-toolbar">
+              <div class="gallery-tabs" id="gradientSchemeTabs" role="tablist" aria-label="渐变分类">
+                <button class="gallery-tab is-active" data-category="all" role="tab" aria-selected="true" type="button">全部</button>
+                <button class="gallery-tab" data-category="nature" role="tab" aria-selected="false" type="button">自然</button>
+                <button class="gallery-tab" data-category="soft" role="tab" aria-selected="false" type="button">柔和</button>
+                <button class="gallery-tab" data-category="vintage" role="tab" aria-selected="false" type="button">复古</button>
+                <button class="gallery-tab" data-category="cool" role="tab" aria-selected="false" type="button">冷色</button>
+                <button class="gallery-tab" data-category="warm" role="tab" aria-selected="false" type="button">暖色</button>
+                <button class="gallery-tab" data-category="neon" role="tab" aria-selected="false" type="button">霓虹</button>
+                <button class="gallery-tab" data-category="dark" role="tab" aria-selected="false" type="button">暗色</button>
+              </div>
+            </div>
+            <div class="gradient-grid" id="gradientSchemeGrid"></div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <!-- ===================== 关于 ===================== -->
+    <section class="view" id="view-about">
+      <main class="main-white">
+        <section class="section" id="about">
+          <div class="container about-wrap">
+            <div class="about-hero">
+              <h1>关于 色度</h1>
+              <p>小红书配色小工具</p>
+            </div>
+
+            <div class="about-section">
+              <div class="about-prose">
+                <p>一个帮你快速搞定配色的小工具。取色、配色、调渐变、查对比度，都在这里完成。</p>
+                <p class="about-privacy">所有取色、配色与计算均在本地完成，不会上传任何图片或个人信息；生成结果仅保存在你的设备上。</p>
+              </div>
+            </div>
+
+            <div class="about-section" id="sponsor">
+              <h2 class="about-section-title">支持一下</h2>
+              <div class="about-prose">
+                <p>如果色度对你有用，欢迎在小红书搜索「色度 seedu」找到我的文章，点个赞、收藏或关注，就是对我最大的支持。真心谢谢你！</p>
+              </div>
+            </div>
+
+            <div class="about-cta">
+              <a class="about-btn about-btn--primary" href="#view-tools">
+                <span>打开工具库</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </a>
+              <a class="about-btn" href="#view-home">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                <span>返回首页</span>
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+  </div><!-- /app-views -->
+
+  <!-- 全局浮层：右下角取色/复制（选取颜色时在任何页面唤出；长按可复制当前颜色） -->
+  <div class="float-search" id="floatSearch">
+    <span class="float-search-dot" id="floatSearchDot"></span>
+    <button class="float-search-input" id="floatSearchInput" type="button" aria-label="当前选中颜色">#fd4a4a</button>
+    <button class="float-search-btn" id="floatSearchBtn" type="button" aria-label="取色">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+  </div>
+  <button class="back-to-top" id="backToTop" type="button" aria-label="返回顶部">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
+  <div hidden>
+    <input id="navHex" type="text" value="#fd4a4a" spellcheck="false" aria-hidden="true" />
+    <span id="navSwatch" aria-hidden="true"></span>
+  </div>
+
+  <!-- 全局 toast（单份） -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- 选取颜色黑色胶囊提示（已选取 X / 右下角长按复制） -->
+  <div class="pick-toast" id="pickToast" role="status" aria-live="polite">
+    <span class="pick-toast-line1"><i class="pick-toast-dot" id="pickToastDot"></i><b id="pickToastText">#fd4a4a</b></span>
+    <span class="pick-toast-line2">右下角长按复制</span>
+  </div>
+
+  <!-- 保存渐变：长按图片保存到相册（兼容小红书 WebView 禁用 download 的情况） -->
+  <div class="save-preview" id="savePreview" hidden>
+    <div class="save-preview-mask" id="savePreviewMask"></div>
+    <div class="save-preview-body">
+      <div class="save-preview-img" id="savePreviewImgWrap" aria-label="渐变预览"></div>
+      <p class="save-preview-tip">截图即可保存</p>
+      <button type="button" class="save-preview-close" id="savePreviewClose" aria-label="关闭">✕</button>
+    </div>
+  </div>
+
+  <!-- 通用迷你预设色板（替代原生 input[type=color]，避免小红书 WebView 崩溃） -->
+  <div class="app-color-panel" id="appColorPanel" hidden>
+    <div class="app-color-panel-head">
+      <span>选择颜色</span>
+      <button type="button" class="app-color-panel-close" id="appColorPanelClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="app-color-panel-grid" id="appColorPanelGrid"></div>
+  </div>
+
+  <!-- ============ 底部导航：4 个 tab ============ -->
+  <nav class="app-tabbar" id="appTabbar" aria-label="底部导航">
+    <button class="app-tab is-active" data-view="view-home" type="button">
+      <span class="app-tab-icon" aria-hidden="true"><svg viewBox="0 0 138 138"><defs><linearGradient id="lg-home" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fd4a4a"/><stop offset="1" stop-color="#fd4a4a"/></linearGradient></defs><path fill="url(#lg-home)" d="M131.508 42.404C135.584 45.41 138 50.2472 138 55.3997V121.999C138 130.836 131.023 138 122.417 138H104.02C95.4133 138 88.4365 130.836 88.4365 121.999V98.1189C88.4365 89.2819 81.4597 82.118 72.8534 82.118H65.1466C56.5403 82.118 49.5635 89.2819 49.5635 98.1189V121.999C49.5635 130.836 42.5867 138 33.9805 138H15.5831C6.97677 138 0 130.836 0 121.999V55.3997C0 50.2472 2.41638 45.41 6.49184 42.404L59.9084 3.00526C65.341 -1.00172 72.6581 -1.00176 78.0907 3.00519L131.508 42.404Z"/></svg></span>
+      <span>首页</span>
+    </button>
+    <button class="app-tab" data-view="view-tools" type="button">
+      <span class="app-tab-icon" aria-hidden="true"><svg viewBox="0 0 138 138"><defs><linearGradient id="lg-tools" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fd4a4a"/><stop offset="1" stop-color="#fd4a4a"/></linearGradient></defs><path fill="url(#lg-tools)" d="M113.564 45.9671C122.593 36.9717 137.863 39.6805 137.998 52.4013C138 52.5908 138 52.7809 138 52.9708C138 82.2258 114.195 105.942 84.8296 105.942C81.4514 105.942 78.1471 105.627 74.9442 105.026C67.0495 103.545 58.4534 104.704 52.7728 110.363L30.2161 132.835C23.3038 139.722 12.0966 139.722 5.18427 132.835C-1.72809 125.949 -1.72809 114.784 5.18427 107.897L27.4077 85.7573C33.1611 80.0254 34.2773 71.3259 32.6861 63.3763C32.0127 60.0119 31.6592 56.5326 31.6592 52.9708C31.6594 23.7159 55.4645 0.000149421 84.8296 0C84.9522 5.20442e-07 85.0749 -7.13963e-06 85.1973 0.000819437C97.9871 0.087326 100.736 15.3199 91.6919 24.3299L79.4799 36.4961C73.4616 42.4921 73.4615 52.2136 79.4799 58.2095C85.4984 64.2054 95.2565 64.2053 101.275 58.2095L113.564 45.9671Z"/></svg></span>
+      <span>工具</span>
+    </button>
+    <button class="app-tab" data-view="view-schemes" type="button">
+      <span class="app-tab-icon" aria-hidden="true"><svg viewBox="0 0 139 138"><defs><linearGradient id="lg-schemes" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fd4a4a"/><stop offset="1" stop-color="#fd4a4a"/></linearGradient></defs><rect fill="url(#lg-schemes)" width="65" height="64" rx="16"/><rect fill="url(#lg-schemes)" x="74" width="65" height="64" rx="16"/><rect fill="url(#lg-schemes)" x="74" y="74" width="65" height="64" rx="16"/><rect fill="url(#lg-schemes)" y="74" width="65" height="64" rx="16"/></svg></span>
+      <span>方案</span>
+    </button>
+    <button class="app-tab" data-view="view-about" type="button">
+      <span class="app-tab-icon" aria-hidden="true"><svg viewBox="0 0 128 138"><defs><linearGradient id="lg-about" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fd4a4a"/><stop offset="1" stop-color="#fd4a4a"/></linearGradient></defs><path fill="url(#lg-about)" d="M63.999 0C85.5811 3.81401e-05 103.077 16.5655 103.077 37C103.077 50.4689 95.475 62.2546 84.1125 68.7254C82.3333 69.7387 82.569 72.7371 84.5215 73.4057C105.892 80.7232 122.396 99.1582 127.686 122.117C129.675 130.75 121.916 138 112.583 138H15.4166C6.08389 138 -1.67537 130.75 0.313675 122.117C5.60389 99.1588 22.1075 80.7246 43.4767 73.4068C45.4292 72.7382 45.6648 69.7398 43.8856 68.7265C32.5229 62.2557 24.921 50.4692 24.921 37C24.921 16.5655 42.4168 0 63.999 0Z"/></svg></span>
+      <span>关于</span>
+    </button>
+  </nav>
+
+  <!-- ============ 脚本（无 ?v=、无 module、无外链） ============ -->
+  <script src="js_gallery-data.js" defer></script>
+  <script src="js_tools.js" defer></script>
+  <script src="js_app.js" defer></script>
+  <script src="js_gallery.js" defer></script>
+  <script src="js_gradient-gallery.js" defer></script>
+
+  <!-- 单页路由 + 工具卡片跳转（外置脚本，符合容器禁止内联脚本要求） -->
+  <script src="js_router.js" defer></script>
+
+</body>
+</html>

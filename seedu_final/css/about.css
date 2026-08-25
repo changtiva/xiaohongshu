@@ -1,0 +1,120 @@
+/* =========================================================
+   色度 · 信息页共享样式（关于页 / 隐私政策页）
+   无卡片化、扁平层次；遵循 styles.css 设计令牌
+   ========================================================= */
+
+/* ---------- 页面容器 ---------- */
+.about-wrap { max-width: 680px; margin: 0 auto; }
+
+/* ---------- Hero：标题 + 一句定位 ---------- */
+.about-hero {
+  text-align: center;
+  padding: var(--sp-8) 0 var(--sp-7);
+  border-bottom: 1px solid var(--border-light);
+}
+.about-hero h1 {
+  font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em;
+  color: var(--text); margin: 0 0 var(--sp-2);
+}
+.about-hero p {
+  font-size: 0.95rem; line-height: 1.65;
+  color: var(--text-muted); margin: 0;
+}
+
+/* ---------- 区块 ---------- */
+.about-section { padding: var(--sp-6) 0; }
+.about-section-title {
+  font-size: 0.78rem; font-weight: 700;
+  color: var(--text-soft);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin: 0 0 var(--sp-4);
+}
+
+/* ---------- 正文段落（无卡片） ---------- */
+.about-prose p {
+  font-size: 0.95rem; line-height: 1.85;
+  color: var(--text); margin: 0 0 var(--sp-3);
+}
+.about-prose p:last-child { margin-bottom: 0; }
+
+/* ---------- 要点清单：两列 ---------- */
+.feat-list {
+  list-style: none; padding: 0; margin: 0;
+  display: grid; grid-template-columns: 1fr 1fr;
+  column-gap: var(--sp-6); row-gap: var(--sp-4);
+}
+.feat-list li {
+  display: flex; gap: var(--sp-3); align-items: flex-start;
+  font-size: 0.9rem; line-height: 1.7; color: var(--text);
+}
+.feat-list .dot {
+  flex: none; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); margin-top: 9px;
+}
+.feat-list b {
+  color: var(--text); font-weight: 700;
+  display: block; margin-bottom: 2px;
+}
+.feat-list span.txt { color: var(--text-muted); font-weight: 400; }
+
+/* ---------- FAQ：细线手风琴（关于页使用） ---------- */
+.about-faq { display: flex; flex-direction: column; }
+.about-faq-item { border-bottom: 1px solid var(--border-light); }
+.about-faq-item:first-child { border-top: 1px solid var(--border-light); }
+.about-faq-item summary {
+  list-style: none; cursor: pointer;
+  padding: var(--sp-4) 0;
+  font-size: 0.95rem; font-weight: 600; color: var(--text);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+}
+.about-faq-item summary::-webkit-details-marker { display: none; }
+.about-faq-item summary::after {
+  content: ""; width: 8px; height: 8px; flex: none;
+  border-right: 1.5px solid var(--text-muted); border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(45deg); transition: transform var(--t-fast); margin-bottom: 2px;
+}
+.about-faq-item[open] summary::after { transform: rotate(-135deg); margin-bottom: -2px; }
+.about-faq-item summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.about-faq-item p {
+  margin: 0; padding: 0 0 var(--sp-4);
+  font-size: 0.9rem; line-height: 1.8; color: var(--text-muted);
+}
+
+/* ---------- CTA + 联系 ---------- */
+.about-cta {
+  padding: var(--sp-7) 0 var(--sp-6);
+  display: flex; gap: var(--sp-3); flex-wrap: wrap; justify-content: center;
+}
+.about-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); background: var(--bg-white); color: var(--text);
+  font-size: 0.9rem; font-weight: 600; padding: 10px 20px; border-radius: var(--r-full);
+  text-decoration: none; cursor: pointer; transition: all var(--t-fast);
+}
+.about-btn:hover { border-color: var(--text-muted); }
+.about-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.about-btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.about-btn--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.about-btn-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.about-contact {
+  padding: 0 0 var(--sp-8);
+  text-align: center;
+  font-size: 0.85rem; color: var(--text-soft);
+}
+.about-contact a {
+  color: var(--text); font-weight: 600; text-decoration: none;
+  border-bottom: 1px solid var(--border-light);
+}
+.about-contact a:hover { border-bottom-color: var(--accent); }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 680px) {
+  .about-hero { padding: var(--sp-6) 0 var(--sp-5); }
+  .about-hero h1 { font-size: 1.5rem; }
+  .feat-list { grid-template-columns: 1fr; column-gap: 0; row-gap: var(--sp-3); }
+}
